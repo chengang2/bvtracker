@@ -28,22 +28,22 @@ func Get_phone_code(c *gin.Context) {
 
 	//获取手机验证码
 	err, phone_code := g.SmsSdkByALiYUN(phone_num)
-	if err.Error() == "OK"{
+	if err.Error() == "OK" {
 		entry := make(map[string]interface{}, 0)
 		entry["phone_num"] = phone_num
 		entry["phone_code"] = phone_code
 
 		data = append(data, entry)
-	}else{
+	} else {
 		code = 1
 		msg = err.Error()
-		if strings.Contains(msg,"触发分钟级流控Permits:1") {
+		if strings.Contains(msg, "触发分钟级流控Permits:1") {
 			msg = "操作太频繁，一个手机号一分钟只能登入一次"
 		}
-		if strings.Contains(msg,"触发小时级流控Permits:5") {
+		if strings.Contains(msg, "触发小时级流控Permits:5") {
 			msg = "操作太频繁，一个手机号一小时只能登入五次"
 		}
-		if strings.Contains(msg,"触发天级流控Permits:10") {
+		if strings.Contains(msg, "触发天级流控Permits:10") {
 			msg = "操作太频繁，一个手机号一天只能登入十次"
 		}
 	}
@@ -94,7 +94,7 @@ func Wetchat_code(c *gin.Context) {
 
 	W := WeCharClient{
 		Appid:       g.Config().Appid,
-		Secret:     g.Config().Appsecret,
+		Secret:      g.Config().Appsecret,
 		RedirectUri: g.Config().Callback,
 		Scope:       "snsapi_login",
 	}
@@ -110,20 +110,20 @@ func Exchange(c *gin.Context) {
 
 	W := WeCharClient{
 		Appid:       g.Config().Appid,
-		Secret:     g.Config().Appsecret,
+		Secret:      g.Config().Appsecret,
 		RedirectUri: g.Config().Callback,
 		Scope:       "snsapi_login",
 	}
 
-	access_token,err := W.Exchanges(code)
-	if err!= nil {
-		fmt.Println("err==",err)
+	access_token, err := W.Exchanges(code)
+	if err != nil {
+		fmt.Println("err==", err)
 	}
-	log.Println("access_token==",access_token)
-	log.Println("Unionid==",access_token.Unionid)
-	log.Println("openid==",access_token.OpenId)
-	user_info,err := W.GetUserInfo(access_token.AccessToken,access_token.OpenId)
-	fmt.Println("user_info==",user_info)
+	log.Println("access_token==", access_token)
+	log.Println("Unionid==", access_token.Unionid)
+	log.Println("openid==", access_token.OpenId)
+	user_info, err := W.GetUserInfo(access_token.AccessToken, access_token.OpenId, g.ChineseSimplified)
+	fmt.Println("user_info==", user_info)
 
 }
 
@@ -131,7 +131,7 @@ func Exchange(c *gin.Context) {
 func (w *WeCharClient) AuthCodeUrl(state string) string {
 	return fmt.Sprintf(
 		"https://open.weixin.qq.com/connect/qrconnect?appid=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s#wechat_redirect",
-		w.Appid, url.QueryEscape(w.RedirectUri),w.Scope,state )
+		w.Appid, url.QueryEscape(w.RedirectUri), w.Scope, state)
 }
 
 // 获取access token
@@ -140,25 +140,23 @@ func (w *WeCharClient) Exchanges(code string) (AccessToken, error) {
 	reUrl := fmt.Sprintf(
 		"https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code",
 		w.Appid, w.Secret, code)
-	log.Println("reUrl==",reUrl)
-	if response, err := Requests("GET", reUrl, nil); err == nil && response.StatusCode == http.StatusOK {
+	log.Println("reUrl==", reUrl)
+	if response, err := g.Requests("GET", reUrl, nil); err == nil && response.StatusCode == http.StatusOK {
 
 		body := response.Body
 		defer body.Close()
 
 		if bodyByte, err := ioutil.ReadAll(body); err == nil {
 
+			var result AccessToken
 
-				var result AccessToken
+			log.Println("bodyByte==", string(bodyByte))
 
-				log.Println("bodyByte==",string(bodyByte))
+			if err := json.Unmarshal(bodyByte, &result); err == nil {
+				fmt.Println("result==", result)
+				return result, nil
 
-				if err := json.Unmarshal(bodyByte, &result); err == nil {
-					fmt.Println("result==",result)
-					return result, nil
-
-				}
-
+			}
 
 		}
 	}
@@ -170,7 +168,7 @@ func (w *WeCharClient) ReGetAccessToken(refreshToken string) (AccessToken, error
 	reUrl := fmt.Sprintf(
 		"https://api.weixin.qq.com/sns/oauth2/refresh_token?appid=%s&grant_type=refresh_token&refresh_token=%s#wechat_redirect",
 		w.Appid, refreshToken)
-	if response, err := Requests("GET", reUrl, nil); err == nil && response.StatusCode == http.StatusOK {
+	if response, err := g.Requests("GET", reUrl, nil); err == nil && response.StatusCode == http.StatusOK {
 
 		body := response.Body
 		defer body.Close()
@@ -191,7 +189,7 @@ func (w *WeCharClient) GetUserInfo(accessToken string, openId string, lang ...st
 	if len(lang) > 0 {
 		reUrl += fmt.Sprintf("&%s", lang[0])
 	}
-	if response, err := Requests("GET", reUrl, nil); err == nil && response.StatusCode == http.StatusOK {
+	if response, err := g.Requests("GET", reUrl, nil); err == nil && response.StatusCode == http.StatusOK {
 
 		body := response.Body
 		defer body.Close()

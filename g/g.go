@@ -4,11 +4,18 @@ import (
 	"fmt"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/dysmsapi"
 	"github.com/gin-gonic/gin"
+	"io"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"sync"
 	"time"
+)
+
+const (
+	ChineseSimplified  = "zh_CN" // 中文简体
+	ChineseTraditional = "zh_TW" // 中文繁体
+	English            = "en"    // 英文
 )
 
 var (
@@ -77,4 +84,11 @@ func GinErrorResponse(c *gin.Context, code int, message string) {
 	data := make([]map[string]interface{}, 0)
 	res := gin.H{"code": code, "data": data, "message": message}
 	c.AbortWithStatusJSON(http.StatusBadRequest, res)
+}
+
+func Requests(method string, url string, body io.Reader) (*http.Response, error) {
+	client := &http.Client{}
+	request, _ := http.NewRequest(method, url, body)
+	request.Header.Set("Content-Type", "application/json")
+	return client.Do(request)
 }
